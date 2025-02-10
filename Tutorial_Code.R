@@ -198,7 +198,52 @@ nc_layer
 add_res <- add_features(nc_layer, nc_summary)
 add_res
 
+nc_layer <- refresh_layer(nc_layer)
+
 # Go to ArcGIS Online and check the new feature added.
+# We can also check within R
+
+nc <- arc_select(nc_layer)
+
+nc_avgs <- nc |> 
+  filter(NAME == "Total") |> 
+  collect()
+
+nc_avgs
+
+
+## Updating features
+# https://developers.arcgis.com/r-bridge/editing/update-features/
+
+# Look at the ArcGIS Online layer and notice AREA and PERIMETER for the feature are not populated.
+# May need to make Perimeter column visible within Portal
+
+# Calculate those values.
+nc_area_perim <- nc_avgs |> 
+  mutate(
+    AREA = st_area(geometry) / 1e10,
+    PERIMETER = s2::s2_perimeter(geometry) / 1e5
+  )
+
+nc_area_perim
+
+# Only select what we want to update
+# Otherwise everything will be updated.
+to_update <- nc_area_perim |> 
+  st_drop_geometry() |> 
+  select(object_id, AREA, PERIMETER)
+
+to_update
+
+# Apply the update
+update_res <- update_features(nc_layer, to_update)
+
+# Confirm update on ArcGIS Online
+
+## Delete feature
+# https://developers.arcgis.com/r-bridge/editing/editing-delete-features/
+
+
 
 
 
