@@ -6,6 +6,15 @@
 #  - Needs module rust for installation
 
 install.packages("arcgis", repos = c("https://r-arcgis.r-universe.dev", "https://cloud.r-project.org"))
+install.packages("usethis")
+
+# Need to modify the environment file to point to the correct ArcGIS Host
+usethis::edit_r_environ()
+
+# Add the following to the .Renviron file:
+# ARCGIS_HOST=https://bucas.maps.arcgis.com/
+
+# Restart the R Session
 
 # Need to store authentication credentials in .Renviron
 # https://developers.arcgis.com/r-bridge/authentication/storing-credentials/
@@ -115,20 +124,20 @@ imgsrv <- arc_open(url)
 imgsrv
 
 
-crater <- arc_raster(
+sample_image <- arc_raster(
   imgsrv,
   xmin = -12509225,
   ymin = 4278090,
   xmax = -12426979,
   ymax = 4349482
 )
-crater
+sample_image
 
 # Check the class of the resulting object and we see it is a terra object
-class(crater)
+class(sample_image)
 
 # Let's plot the image
-terra::plotRGB(crater, stretch="lin")
+terra::plotRGB(sample_image, stretch="lin")
 
 ## PUBLISHING LAYERS
 
@@ -139,11 +148,57 @@ nc
 
 plot(nc$geometry)
 
-# First we need to make sure we are authenticated.
+# We need to first create an access token
 token <- auth_code() 
 set_arc_token(token) 
 
 # Now publish the layer
 res <- publish_layer(nc, "North Carolina SIDS")
 res
+
+# Go to ArcGIS Online to view the layer.
+
+# We can use the returned information to open the layer in R as well.
+nc_fserver <- arc_open(res[[c("services", "encodedServiceURL")]])
+nc_fserver
+
+## Adding Feature to existing layer
+https://developers.arcgis.com/r-bridge/editing/editing-add-features/
+
+library(sf)
+nc_sf <- read_sf(system.file("shape/nc.shp", package = "sf"))
+nc_sf
+
+# Create a summary
+# "Let’s calculate the average birth rate, SIDS rate, 
+# and the non-white birth rate and SIDS rate for the entire 
+# state. We will add this as a single feature to our existing 
+# feature layer."
+library(dplyr)
+
+nc_summary <- nc_sf |>  
+  summarise(
+    across( # <1>
+      .cols = c(ends_with("74"), ends_with("79")), # <2>
+      .fns = mean # <3>
+    ),
+    NAME = "Total" # Value for "NAME column.
+  ) 
+
+nc_summary
+plot(nc_summary)
+
+# Look at ArcGIS Online to see the existing number of features
+
+# Get the host name of the layer
+nc_layer <- get_layer(nc_fserver, id=0)
+nc_layer
+
+# Add the layer
+add_res <- add_features(nc_layer, nc_summary)
+add_res
+
+# Go to ArcGIS Online and check the new feature added.
+
+
 
