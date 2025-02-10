@@ -243,6 +243,13 @@ update_res <- update_features(nc_layer, to_update)
 ## Delete feature
 # https://developers.arcgis.com/r-bridge/editing/editing-delete-features/
 
+# First select what feature to delete by object_id
+nc
+
+# Then delete that feature using the object_id
+delete_res <- delete_features(nc_layer, object_ids = 101)
+delete_res
+
 
 
 
